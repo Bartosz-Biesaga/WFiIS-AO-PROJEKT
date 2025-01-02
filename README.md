@@ -1,7 +1,3 @@
----
-
-# WFiIS-AO-PROJEKT
-
 **Aktualizacje na 02.01.2025:**
 
 1. **Zaimplementowano wstępną obróbkę obrazów.**
@@ -26,5 +22,3 @@
 3. Ktoś musi dodać kod przygotowujący obrazki rejestracji do rozpoznawania tablic rejestracyjnych (na końcowym etapie).
 4. Wybór technologii:
    - Czy na pewno moje zmiany wymagają PyTorch? I czy chcemy konkretnie implementować na PyTorch?
-
----
