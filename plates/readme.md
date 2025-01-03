@@ -1,1 +1,1 @@
-File where all extracted plates are saved.
+Folder where all extracted plates images are saved.
