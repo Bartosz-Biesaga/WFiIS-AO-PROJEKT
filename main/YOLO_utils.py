@@ -24,6 +24,28 @@ def crop_boxes_from_image(yolo, image, license_plate_car_ioa=0.85, confidence=0.
             license_plates.append([image[box[1]:box[3], box[0]:box[2]], box,
                                    (box[2] - box[0]) * (box[3] - box[1]), False])
 
+    # usuwanie wykrytych dwukrotnie tablic rejestracyjnych, poprzez wybranie wiekszej
+    indices_to_remove = []
+    for i in range(len(license_plates)):
+        license_plate_i_left_top_x = license_plates[i][1][0]
+        license_plate_i_left_top_y = license_plates[i][1][1]
+        license_plate_i_bottom_right_x = license_plates[i][1][2]
+        license_plate_i_bottom_right_y = license_plates[i][1][3]
+        for j in range(i+1, len(license_plates)):
+            x = (min(license_plate_i_bottom_right_x, license_plates[j][1][2])
+                 - max(license_plate_i_left_top_x, license_plates[j][1][0]))
+            y = (min(license_plate_i_bottom_right_y, license_plates[j][1][3])
+                 - max(license_plate_i_left_top_y, license_plates[j][1][1]))
+            # jesli tablic sie pokrywaja, usuwamy mniejsza z nich
+            if x > 0 and y > 0:
+                if license_plates[i][2] > license_plates[j][2]:
+                    indices_to_remove.append(j)
+                else:
+                    indices_to_remove.append(i)
+    for index in indices_to_remove:
+        license_plates.pop(index)
+
+
     # lista indeksow aut do ktorych przypisano dokladnie jedna rejestracje
     single_license_plate_car_indices = []
     # lista indeksow aut do ktorych przypisano ponad jedna rejestracje
@@ -84,13 +106,12 @@ def crop_boxes_from_image(yolo, image, license_plate_car_ioa=0.85, confidence=0.
 if __name__ == '__main__':
     dir_path = os.path.dirname(os.path.realpath(__file__))
     yolo = YOLO(os.path.join(dir_path, "..", "models", "YOLO", "weights", "best.pt"))
-    image = cv.imread(os.path.join(dir_path, "..", "test_data", "test_image_8.jpg"))
+    image = cv.imread(os.path.join(dir_path, "..", "test_data", "test_image_14.jpg"))
     pairs = crop_boxes_from_image(yolo, image, save_prediction=True)
-    cars, license_plate_lists = zip(*pairs)
-    for i, car in enumerate(cars):
+    for i, pair in enumerate(pairs):
+        car, license_plate_list = pair
         if car is not None:
             cv.imwrite(os.path.join(dir_path, "..", "results", f"car_{i}.jpg"), car)
-    for i, license_plate_list in enumerate(license_plate_lists):
-        for j, license_plate in enumerate(license_plate_list):
-            cv.imwrite(os.path.join(dir_path, "..", "results",
-                    f"license_plate_{i}_{j}.jpg"), license_plate)
+            for j, license_plate in enumerate(license_plate_list):
+                cv.imwrite(os.path.join(dir_path, "..", "results",
+                                        f"license_plate_{i}_{j}.jpg"), license_plate)
