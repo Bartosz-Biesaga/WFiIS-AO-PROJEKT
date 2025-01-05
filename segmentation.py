@@ -51,7 +51,7 @@ def process_image(image_path, debug=False, aspect_ratio_range=(2, 5), min_height
     return "Tablica znaleziona", final_license_plate
 
 
-def save_characters_images(license_plate_image, output_folder):
+def save_characters_images(license_plate_image, output_folder, min_char_height=20, max_char_height=100, min_char_aspect_ratio=0.2, max_char_aspect_ratio=1.0):
     os.makedirs(output_folder, exist_ok=True)
 
     inverted_plate = cv2.bitwise_not(license_plate_image)
@@ -62,10 +62,13 @@ def save_characters_images(license_plate_image, output_folder):
     characters = []
     for i, contour in enumerate(contours):
         x, y, w, h = cv2.boundingRect(contour)
-        char_image = license_plate_image[y:y+h, x:x+w]
-        char_path = os.path.join(output_folder, f"char_{i}.jpg")
-        cv2.imwrite(char_path, char_image)
-        characters.append(char_image)
+        aspect_ratio = w / h
+
+        if min_char_height <= h <= max_char_height and min_char_aspect_ratio <= aspect_ratio <= max_char_aspect_ratio:
+            char_image = license_plate_image[y:y+h, x:x+w]
+            char_path = os.path.join(output_folder, f"char_{i}.jpg")
+            cv2.imwrite(char_path, char_image)
+            characters.append(char_image)
 
     return characters, len(contours)
 
