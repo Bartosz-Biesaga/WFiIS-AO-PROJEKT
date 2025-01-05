@@ -3,47 +3,28 @@ import cv2
 import numpy as np
 
 def process_image(image_path, debug=False, aspect_ratio_range=(2, 5), min_height=20, blur_ksize=(5, 5)):
-    """
-    Przetwarza obraz w celu wykrycia i wyizolowania tablicy rejestracyjnej.
-
-    Argumenty:
-        image_path (str): Ścieżka do obrazu.
-        debug (bool): Zapisz obrazy pomocnicze do debugowania, jeśli True.
-        aspect_ratio_range (tuple): Oczekiwany zakres proporcji boków dla tablicy rejestracyjnej.
-        min_height (int): Minimalna wysokość tablicy rejestracyjnej w pikselach.
-        blur_ksize (tuple): Rozmiar jądra dla rozmycia Gaussa.
-
-    Zwraca:
-        tuple: Komunikat statusu oraz przetworzony obraz tablicy rejestracyjnej lub None.
-    """
     debug_folder = "debug"
     if debug:
         os.makedirs(debug_folder, exist_ok=True)
 
-    # Wczytanie obrazu
     image = cv2.imread(image_path)
     if image is None:
         return "Błąd: Nie można wczytać obrazu", None
 
-    # Konwersja do odcieni szarości
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     if debug:
         cv2.imwrite(os.path.join(debug_folder, "gray.jpg"), gray)
 
-    # Zastosowanie rozmycia Gaussa
     blurred = cv2.GaussianBlur(gray, blur_ksize, 0)
     if debug:
         cv2.imwrite(os.path.join(debug_folder, "blurred.jpg"), blurred)
 
-    # Zastosowanie adaptacyjnego progowania
     thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
     if debug:
         cv2.imwrite(os.path.join(debug_folder, "thresh.jpg"), thresh)
 
-    # Wyszukiwanie konturów
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Wykrywanie tablicy rejestracyjnej
     license_plate = None
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
@@ -59,61 +40,34 @@ def process_image(image_path, debug=False, aspect_ratio_range=(2, 5), min_height
     if license_plate is None:
         return "Tablica nie znaleziona", None
 
-    # Tworzenie białego tła
     white_background = np.ones_like(license_plate) * 255
-
-    # Zastosowanie progowania binaryzującego do uzyskania postaci znaków
     _, thresh_plate = cv2.threshold(license_plate, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # Maskowanie znaków na białym tle
     masked_license_plate = cv2.bitwise_and(white_background, white_background, mask=thresh_plate)
-
-    # Zachowanie znaków na białym tle
     final_license_plate = cv2.add(masked_license_plate, thresh_plate)
     
-    # Zapisanie lub debuggowanie finalnego obrazu
     if debug:
         cv2.imwrite(os.path.join(debug_folder, "license_plate_white_background.jpg"), final_license_plate)
 
     return "Tablica znaleziona", final_license_plate
 
 
-def save_characters_images(license_plate_image, output_folder, possible_chars=(7, 8)):
-    """
-    Dzieli obraz tablicy rejestracyjnej na poszczególne znaki i zapisuje je.
-
-    Argumenty:
-        license_plate_image (ndarray): Przetworzony obraz tablicy rejestracyjnej.
-        output_folder (str): Katalog, w którym będą zapisywane obrazy znaków.
-        possible_chars (tuple): Możliwe liczby znaków do wykrycia.
-
-    Zwraca:
-        tuple: Lista ścieżek do zapisanych obrazów znaków oraz liczba wykrytych znaków.
-    """
+def save_characters_images(license_plate_image, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
-    h, w = license_plate_image.shape
-    best_fit, best_variance = None, float('inf')
-
-    # Określenie najlepszego dopasowania dla segmentacji znaków
-    for chars in possible_chars:
-        char_width = w // chars
-        estimated_width = char_width * chars
-        variance = abs(w - estimated_width)
-        if variance < best_variance:
-            best_variance, best_fit = variance, chars
-
-    char_width = w // best_fit
+    inverted_plate = cv2.bitwise_not(license_plate_image)
+    
+    contours, _ = cv2.findContours(inverted_plate, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
+    
     characters = []
-
-    # Segmentacja znaków na podstawie najlepszego dopasowania
-    for i in range(best_fit):
-        char_image = license_plate_image[:, i * char_width:(i + 1) * char_width]
+    for i, contour in enumerate(contours):
+        x, y, w, h = cv2.boundingRect(contour)
+        char_image = license_plate_image[y:y+h, x:x+w]
         char_path = os.path.join(output_folder, f"char_{i}.jpg")
         cv2.imwrite(char_path, char_image)
-        characters.append(char_path)
+        characters.append(char_image)
 
-    return characters, best_fit
+    return characters, len(contours)
 
 
 def main():
