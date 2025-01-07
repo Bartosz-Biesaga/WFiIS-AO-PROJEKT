@@ -11,3 +11,4 @@ seaborn>=0.11.0
 psutil
 py-cpuinfo
 ultralytics-thop>=2.0.0
+scikit-image
