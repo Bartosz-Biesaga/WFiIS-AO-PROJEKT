@@ -1,0 +1,1 @@
+Folder na przechowywanie danych do testowania
