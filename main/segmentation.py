@@ -176,5 +176,3 @@ def reshape_character(char, target_resized = 216, target_padded = 256):
     left = (target_padded-width) // 2
     right = target_padded-width-left
     return cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value = 0)
-
-# extract_characters_from_data(debug=True)

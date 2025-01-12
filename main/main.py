@@ -1,18 +1,21 @@
 import torch
-import cv2
 import os
 from segmentation import process_image, get_characters_images, reshape_character, CHARS
+from torchvision.models import efficientnet_b1, EfficientNet_B1_Weights
 
 # Ładowanie modelu
-model_path = "models/char_recognition/weights/best_weights_only.pt"
-model = torch.load(model_path)
+model_path = "../models/char_recognition/weights/best_weights_only.pt"
+model = efficientnet_b1()
+features_in = model.classifier[1].in_features
+model.classifier = torch.nn.Linear(features_in, len(CHARS))
+model.load_state_dict(torch.load(model_path, weights_only=True)['model_state_dict'])
 model.eval()
+preprocess = EfficientNet_B1_Weights.DEFAULT.transforms()
 
-# [ Jedna, dwie lub trzy pierwsze litery tworzą wyróżnik miejsca. Pierwsza litera oznacza województwo. 
-# Jedna lub dwie następne – powiat albo miasto na prawach powiatu, albo dzielnicę Warszawy, ale 
-# istnieją odstępstwa od tej reguły. Po wyróżniku powiatu (a w przypadku tablic samochodowych 
-# zmniejszonych – województwa) następuje wyróżnik pojazdu. Nie można w nim jednak stosować 
-# liter B, D, I, O, Z[3],zbyt podobnych do cyfr 8, 0, 1, 0, 2. ]
+# W wyróżniku pojazdu (drugiej części tablicy rejestracyjnej) mie można stosować
+# liter B, D, I, O, Z, zbyt podobnych do cyfr 8, 0, 1, 0, 2., dlatego gdy model
+# przewidzi taka literę w drugiej części rejestracji, wybieramy jego najpewniejszą
+# predykcję nie będącą zakazanym znakiem
 
 # Definicja zakazanych liter
 forbidden_chars = {'B', 'D', 'I', 'O', 'Z'}
@@ -23,8 +26,9 @@ def recognize_characters(char_images):
     for char_img in char_images:
         # Przygotowanie obrazu do predykcji
         char_img_resized = reshape_character(char_img)
-        char_img_tensor = torch.tensor(char_img_resized).unsqueeze(0).unsqueeze(0).float() / 255.0  # Skalowanie do zakresu 0-1
-
+        char_img_tensor = torch.tensor(char_img_resized).float()
+        char_img_tensor = char_img_tensor.repeat(3, 1, 1).unsqueeze(0)
+        char_img_tensor = preprocess(char_img_tensor)
         # Przewidywanie
         with torch.no_grad():
             output = model(char_img_tensor)
@@ -68,16 +72,12 @@ def process_license_plate(image_path):
     return result_text
 
 if __name__ == "__main__":
-    test_folder = "test_data"
-    result_folder = "result"
-
-    os.makedirs(result_folder, exist_ok=True)
-
+    test_folder = "."
     for image_name in os.listdir(test_folder):
         image_path = os.path.join(test_folder, image_name)
         if image_path.endswith('.png') or image_path.endswith('.jpg'):
             result_text = process_license_plate(image_path)
             print(f"Wynik dla {image_name}: {result_text}")
 
-            with open(os.path.join(result_folder, f"{image_name}_result.txt"), 'w') as result_file:
-                result_file.write(result_text)
+            # with open(os.path.join(result_folder, f"{image_name}_result.txt"), 'w') as result_file:
+            #     result_file.write(result_text)
