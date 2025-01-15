@@ -3,15 +3,11 @@ import os
 from segmentation import process_image, get_characters_images, reshape_character, CHARS
 from torchvision.models import efficientnet_b1, EfficientNet_B1_Weights
 
-# Definicja zakazanych liter
-forbidden_chars = {'B', 'D', 'I', 'O', 'Z'}
-
-# Inicjalizacja ścieżek
-dir_path = os.path.dirname(os.path.realpath(__file__))
-model_path = os.path.join(dir_path, "..", "models", "char_recognition", "weights", "best_weights_only.pt")
-
 # Funkcja do ładowania modelu
-def load_model(model_path):
+def load_model():
+    # Inicjalizacja ścieżek
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    model_path = os.path.join(dir_path, "..", "models", "char_recognition", "weights", "best_weights_only.pt")
     try:
         model = efficientnet_b1()
         features_in = model.classifier[1].in_features
@@ -28,6 +24,9 @@ def recognize_characters(model, preprocess, char_images, space_index):
     recognized_text = ''
     outputs = []  # Przechowuj wyniki modelu dla każdego znaku
     for idx, char_img in enumerate(char_images):
+        # Dodanie spacji na odpowiednim indeksie
+        if idx == space_index:
+            recognized_text += ' '
         try:
             # Przygotowanie obrazu do predykcji
             char_img_resized = reshape_character(char_img)
@@ -42,29 +41,31 @@ def recognize_characters(model, preprocess, char_images, space_index):
                 predicted_char = list(CHARS.keys())[predicted.item()]
                 recognized_text += predicted_char
                 outputs.append(output)  # Zachowaj surowy wynik modelu dla tego znaku
-
-            # Dodanie spacji na odpowiednim indeksie
-            if idx == space_index:
-                recognized_text += ' '
         except Exception as e:
             recognized_text += "[ERROR]"
             print(f"Error processing character: {e}")
     return recognized_text, outputs
 
 # Funkcja przetwarzania tablicy rejestracyjnej
-def process_license_plate(image_path=None, processed_image=None, model=None, preprocess=None):
+def process_license_plate(image_path=None, image=None, model=None, preprocess=None):
     try:
         # Jeśli wycięty obraz nie został przekazany, przetwarzamy obraz z pliku
-        if processed_image is None:
+        if image is None:
             if image_path is None:
                 raise ValueError("Either 'image_path' or 'processed_image' must be provided.")
-            processed_image = process_image(image_path=image_path)
+            else:
+                processed_image = process_image(image_path=image_path)
+        else:
+            processed_image = process_image(img=image)
 
         # Segmentacja znaków
         char_images, space_index = get_characters_images(processed_image)
 
         # Rozpoznawanie znaków
         recognized_text, outputs = recognize_characters(model, preprocess, char_images, space_index)
+
+        # Definicja zakazanych liter (nie moga one wystepowac w drugiej czesci tablicy rejestracyjnej
+        forbidden_chars = {'B', 'D', 'I', 'O', 'Z'}
 
         # Obsługa zakazanych znaków w drugiej części
         parts = recognized_text.split(' ')
@@ -96,7 +97,7 @@ def process_license_plate(image_path=None, processed_image=None, model=None, pre
 
 if __name__ == "__main__":
     # Ładowanie modelu
-    model, preprocess = load_model(model_path)
+    model, preprocess = load_model()
 
     # Przetwarzanie obrazów w folderze
     test_folder = "."
