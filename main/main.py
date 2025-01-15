@@ -24,59 +24,67 @@ def load_model(model_path):
         raise RuntimeError(f"Error loading the model: {e}")
 
 # Funkcja do rozpoznawania znaków
-def recognize_characters(model, preprocess, char_images):
+def recognize_characters(model, preprocess, char_images, space_index):
     recognized_text = ''
-    for char_img in char_images:
+    outputs = []  # Przechowuj wyniki modelu dla każdego znaku
+    for idx, char_img in enumerate(char_images):
         try:
             # Przygotowanie obrazu do predykcji
             char_img_resized = reshape_character(char_img)
             char_img_tensor = torch.tensor(char_img_resized).float()
             char_img_tensor = char_img_tensor.repeat(3, 1, 1).unsqueeze(0)
             char_img_tensor = preprocess(char_img_tensor)
-            
+
             # Przewidywanie
             with torch.no_grad():
                 output = model(char_img_tensor)
                 _, predicted = torch.max(output, 1)
                 predicted_char = list(CHARS.keys())[predicted.item()]
                 recognized_text += predicted_char
+                outputs.append(output)  # Zachowaj surowy wynik modelu dla tego znaku
+
+            # Dodanie spacji na odpowiednim indeksie
+            if idx == space_index:
+                recognized_text += ' '
         except Exception as e:
             recognized_text += "[ERROR]"
             print(f"Error processing character: {e}")
-    return recognized_text
+    return recognized_text, outputs
 
 # Funkcja przetwarzania tablicy rejestracyjnej
-def process_license_plate(image_path):
+def process_license_plate(image_path=None, processed_image=None, model=None, preprocess=None):
     try:
-        # Przetwarzanie obrazu tablicy rejestracyjnej
-        processed_image = process_image(image_path=image_path)
+        # Jeśli wycięty obraz nie został przekazany, przetwarzamy obraz z pliku
+        if processed_image is None:
+            if image_path is None:
+                raise ValueError("Either 'image_path' or 'processed_image' must be provided.")
+            processed_image = process_image(image_path=image_path)
 
         # Segmentacja znaków
-        char_images, _ = get_characters_images(processed_image)
+        char_images, space_index = get_characters_images(processed_image)
 
         # Rozpoznawanie znaków
-        recognized_text = recognize_characters(model, preprocess, char_images)
-
-        # Dodanie spacji, jeśli jej brak
-        if ' ' not in recognized_text and len(recognized_text) > 3:
-            recognized_text = recognized_text[:3] + ' ' + recognized_text[3:]
+        recognized_text, outputs = recognize_characters(model, preprocess, char_images, space_index)
 
         # Obsługa zakazanych znaków w drugiej części
         parts = recognized_text.split(' ')
         if len(parts) > 1:
             first_part, second_part = parts[0], parts[1]
             corrected_second_part = ''
-            for char in second_part:
+            for idx, char in enumerate(second_part):
                 if char in forbidden_chars:
-                    # Jeśli znak jest zakazany, znajdujemy alternatywę w dozwolonych literach
+                    # Znalezienie alternatywnych znaków dla zakazanych liter
                     alternative_predictions = []
-                    for idx in range(len(output[0])):
-                        predicted_char = list(CHARS.keys())[idx]
-                        if predicted_char not in forbidden_chars:  # Tylko dozwolone litery
-                            alternative_predictions.append((predicted_char, output[0][idx].item()))
-                    # Posortowanie alternatyw według pewności przewidywań
-                    alternative_predictions = sorted(alternative_predictions, key=lambda x: x[1], reverse=True)
-                    corrected_second_part += alternative_predictions[0][0]  # Zamiana na najpewniejszą alternatywę
+                    output = outputs[space_index + 1 + idx]  # Wynik modelu dla tego znaku
+                    for char_idx, score in enumerate(output[0]):
+                        predicted_char = list(CHARS.keys())[char_idx]
+                        if predicted_char not in forbidden_chars:
+                            alternative_predictions.append((predicted_char, score.item()))
+
+                    # Posortowanie alternatyw i wybór najlepszego znaku
+                    alternative_predictions.sort(key=lambda x: x[1], reverse=True)
+                    if alternative_predictions:
+                        corrected_second_part += alternative_predictions[0][0]
                 else:
                     corrected_second_part += char
             recognized_text = f"{first_part} {corrected_second_part}"
@@ -95,5 +103,5 @@ if __name__ == "__main__":
     for image_name in os.listdir(test_folder):
         image_path = os.path.join(test_folder, image_name)
         if image_path.endswith('.png') or image_path.endswith('.jpg'):
-            result_text = process_license_plate(image_path)
+            result_text = process_license_plate(image_path=image_path, model=model, preprocess=preprocess)
             print(f"Wynik dla {image_name}: {result_text}")
