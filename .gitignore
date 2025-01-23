@@ -1,0 +1,9 @@
+/shelf/
+/workspace.xml
+venv/
+.idea/
+*.pyc
+*.pyo
+__pycache__/
+.DS_Store
+.*.swp

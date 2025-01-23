@@ -1,0 +1,1 @@
+Folder na przechowywanie rezultatów modeli
