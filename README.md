@@ -26,7 +26,7 @@ pip3 install -r requirements_with_deps2.txt
 pip3 install -r requirements_without_deps.txt --no-deps
 python3 main/gui.py
 ```
-
+W folderze *test_data* znajdują się zdjęcia, na których można przetestować działanie aplikacji.
 
 ### Struktura projektu
 
