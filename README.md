@@ -1,23 +1,28 @@
-# Detekcja aut i odczytywanie rejestracji
-
+# Car detection and license plate recognition
+Project for the fifth semester Image Analysis course at AGH.
 ___
+### Project description
+The project is a simple desktop application, that allows user to automatically detect vehicles and license 
+plates in the loaded image and then read detected license plates.
 
-### Autorzy
+Project was written in Python using ultralytics package for vehicle and license place detection, opencv for 
+license plate character segmentation, pytorch for character recognition and tkinter for GUI.
 
+### Authors
 - [Bartosz Biesaga](https://github.com/Bartosz-Biesaga)
 - [Paweł Dyjak](https://github.com/paweld37)
 - [Julia Zwierko](https://github.com/juliazwierko)
+  
+### Starting the app
 
-### Uruchamianie aplikacji
-
-#### Wymagania
-GUI zostało przygotowane z wykorzystaniem pakietu tkinter, który w większości przypadków jest dostarczany razem z pythonem, w przypadku gdyby nie był on dostępny można go zainstalować korzystając z polecenia:
+#### Requirements
+GUI was created using tkinter package, which in most cases is delivered with python, but in case it is not avaiable it may be installed with following command:
 ```shell
 sudo apt-get install python3-tk
 ```
-Aplikacja była tworzono i testowana z python 3.12.3.
+Application was developed and tested using python 3.12.3.
 
-#### Instalacja pakietów i uruchomienie aplikacji w wirtualnym środowisku:
+#### Installing dependencies and starting the app in virtual environment
 ```shell
 python3 -m venv venv
 source venv/bin/activate
@@ -26,18 +31,18 @@ pip3 install -r requirements_with_deps2.txt
 pip3 install -r requirements_without_deps.txt --no-deps
 python3 main/gui.py
 ```
-W folderze *test_data* znajdują się zdjęcia, na których można przetestować działanie aplikacji.
+In *test_data* folder there are images that may be used to test the application.
 
-### Struktura projektu
+### Folder structure
 
-#### Folder *main*
-W tym folderze umieściliśmy wszystkie pliki potrzebne do działania projeku, czyli skrypty odpowiedzialne za interfejs użytkownika (*gui.py*), detekcję (*YOLO_utils.py*), segmentację (*segmentation.py*) oraz rozpoznawanie znaków (*recognition.py*).
+#### *main*
+All source files are located there. GUI scripts in *gui.py*, detection in *YOLO_utils.py*, segmentation in *segmentation.py* and character recognition in *recognition.py*.
 
-#### Folder *models*
-W tym folderze umieściliśmy notebooki, które uruchamialiśmy w google colab, w celu nauki modelu YOLO i do rozpoznawania pojedynczych znaków oraz wagi tych modeli z najlepszymi wynikami osiągniętymi w czasie treningu na zbiorach walidacyjnych, aby móc je załadować w pozostałych skryptach.
+#### *models*
+All notebooks that we run in google colab to train YOLO and character recognition model and their weights saved from training when their performance on validation datasets were best to easily load them in other scripts.
 
-#### Folder *dokumentacja*
-W tym folderze umieściliśmy dokumentację naszego projektu.
+#### *dokumentacja*
+Project documentation (written in Polish).
 
-#### Foldery *test_data* oraz *results*
-Są to foldery na odpowiednio dane do testowania aplikacji oraz na zapisywanie rezultatów.
+#### *test_data* and *results*
+Folders for respectively data for app testing and for saving the results.
