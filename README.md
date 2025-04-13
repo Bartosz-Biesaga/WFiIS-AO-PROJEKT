@@ -2,10 +2,10 @@
 Project for the fifth semester Image Analysis course at AGH.
 ___
 ### Project description
-The project is a simple desktop application, that allows user to automatically detect vehicles and license 
+The project is a simple desktop application, that allows the user to automatically detect vehicles and license 
 plates in the loaded image and then read detected license plates.
 
-Project was written in Python using ultralytics package for vehicle and license place detection, opencv for 
+Project was written in Python using ultralytics package for vehicle and license plate detection, opencv for 
 license plate character segmentation, pytorch for character recognition and tkinter for GUI.
 
 ### Authors
